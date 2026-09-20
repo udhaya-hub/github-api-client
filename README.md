@@ -1,0 +1,198 @@
+# GitHub API Client
+
+A production-style Python CLI for exploring GitHub user and repository data using authenticated API requests, caching, retries, and structured error handling.
+
+## Overview
+
+This project demonstrates a clean Python client for the GitHub REST API. It fetches user data, repository metadata, commit summaries, and contributor information while managing rate limits, caching, retries, and typed models.
+
+It is designed to be easy to run locally, safe to extend, and useful as a reference project for API integration work in Python.
+
+## Features
+
+- GitHub token authentication via `.env`
+- User -> repositories -> commits/contributors workflow
+- Automatic pagination across GitHub list endpoints
+- Rate limit awareness and backoff handling
+- Retry logic for timeout and server-side failures
+- Custom exception hierarchy for API failures
+- Pydantic models for structured data validation
+- Rich terminal output for CLI users
+- SQLite cache with TTL support
+- Logging and test coverage
+
+## Quick start
+
+### 1) Create and activate a Python environment
+
+```powershell
+cd "D:\My Work\API CLIENT"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### 2) Install the project
+
+```powershell
+pip install -e .
+```
+
+For development tools:
+
+```powershell
+pip install -e ".[dev]"
+```
+
+### 3) Add your GitHub token
+
+Create a token at: https://github.com/settings/tokens
+
+Required scopes:
+- `public_repo` for public repositories
+- `repo` for private repositories
+
+Then create a `.env` file in the project root with:
+
+```env
+GITHUB_TOKEN=ghp_your_token_here
+GITHUB_API_BASE_URL=https://api.github.com
+REQUEST_TIMEOUT=30.0
+MAX_RETRIES=3
+RETRY_BASE_DELAY=1.0
+RATE_LIMIT_THRESHOLD=10
+CACHE_TTL=3600
+CACHE_DB_PATH=cache.db
+LOG_LEVEL=INFO
+```
+
+A ready-to-use launcher is included:
+
+```powershell
+.
+un.bat --user octocat --action repo-stats
+```
+
+## Usage
+
+### CLI commands
+
+```powershell
+# User repository stats in table format
+.
+un.bat --user octocat --action repo-stats
+
+# JSON output
+.
+un.bat --user octocat --action repo-stats --format json
+
+# Export results to a file
+.
+un.bat --user octocat --action repo-stats --output stats.json --format json
+
+# Check rate limit
+.
+un.bat --user octocat --action rate-limit
+
+# Clear cached responses
+.
+un.bat --clear-cache
+
+# Disable caching for one run
+.
+un.bat --user octocat --action repo-stats --no-cache
+```
+
+### Python usage
+
+```python
+from api_client.client import GitHubClient
+from api_client.models import GitHubUser, GitHubRepository
+
+with GitHubClient() as client:
+    user_data = client.get_user("octocat")
+    user = GitHubUser(**user_data)
+
+    repos_data = client.get_user_repos("octocat")
+    repos = [GitHubRepository(**repo) for repo in repos_data]
+
+    commits = client.get_repo_commits("octocat", "Hello-World")
+    contributors = client.get_repo_contributors("octocat", "Hello-World")
+    rate_limit = client.get_rate_limit()
+```
+
+## Project structure
+
+```text
+api_client/
+├── __init__.py
+├── cache.py
+├── cli.py
+├── client.py
+├── config.py
+├── exceptions.py
+├── logging_config.py
+├── models.py
+tests/
+├── conftest.py
+├── test_cache.py
+├── test_client.py
+├── test_config.py
+├── test_exceptions.py
+├── test_models.py
+main.py
+run.bat
+run.ps1
+README.md
+pyproject.toml
+.env.example
+.env
+```
+
+## Running tests
+
+```powershell
+pytest
+```
+
+Optional coverage run:
+
+```powershell
+pytest --cov=api_client
+```
+
+## Development tools
+
+```powershell
+ruff check .
+ruff format .
+mypy api_client
+```
+
+## Architecture notes
+
+### Exception model
+
+The client raises typed errors for common API responses:
+
+- `APIAuthError`
+- `APIRateLimitError`
+- `APINotFoundError`
+- `APIServerError`
+- `APITimeoutError`
+- `APIError`
+
+### Retry behavior
+
+Requests retry automatically for transient failures such as timeouts, network errors, and server-side errors using exponential backoff.
+
+### Caching
+
+Responses are saved in SQLite with a TTL, reducing repeated API calls for metadata that is unlikely to change often.
+
+## License
+
+MIT
+
+## Notes
+
+This project is intended for local development and learning. It includes a working example of a resilient GitHub client pattern and can be extended to support additional endpoints or web interfaces.
