@@ -1,2 +1,0 @@
-[console_scripts]
-api-client = api_client.cli:main
